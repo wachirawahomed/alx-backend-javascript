@@ -1,14 +1,22 @@
-import signUpUser from './4-user-promise';
-import uploadPhoto from './5-photo-reject';
+import { uploadPhoto, createUser } from './utils';
 
-export default function handleProfileSignup(firstName, lastName, fileName) {
-  const signUp = signUpUser(firstName, lastName);
-  const upload = uploadPhoto(fileName);
+export default async function handleProfileSignup(firstName, lastName, fileName) {
+  const queue = [];
 
-  return Promise.allSettled([signUp, upload]).then(results => {
-    return results.map(result => ({
-      status: result.status,
-      value: result.status === 'fulfilled' ? result.value : result.reason
-    }));
-  });
+  try {
+    const photo = await uploadPhoto(fileName);
+    queue.push({ status: 'fulfilled', value: photo });
+  } catch (error) {
+    queue.push({ status: 'rejected', value: error.message });
+  }
+
+  try {
+    const user = await createUser(firstName, lastName);
+    queue.push({ status: 'fulfilled', value: user });
+  } catch (error) {
+    queue.push({ status: 'rejected', value: error.message });
+  }
+
+  queue.push('Guardrail was processed');
+  return queue;
 }
